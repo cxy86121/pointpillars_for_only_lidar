@@ -70,6 +70,7 @@ class KittiMetric(MetricABC):
 
     def _parse_gt_to_eval_format(self,
                                  groundtruths: List[np.ndarray]) -> List[dict]:
+        """ gx-20230525"""
         res = []
         for rows in groundtruths:
             if rows.size == 0:
@@ -172,6 +173,7 @@ class KittiMetric(MetricABC):
 
     def _parse_predictions_to_eval_format(
             self, predictions: List[Sample]) -> List[dict]:
+        """ gx-20230525"""
         res = {}
         for pred in predictions:
             filter_fake_result(pred)
@@ -291,6 +293,7 @@ class KittiMetric(MetricABC):
 
     def compute(self, verbose=False, **kwargs) -> dict:
         """
+         gx-20230525
         """
         gt_annos = self._parse_gt_to_eval_format(self.gt_annos)
         dt_annos = self._parse_predictions_to_eval_format(self.predictions)
