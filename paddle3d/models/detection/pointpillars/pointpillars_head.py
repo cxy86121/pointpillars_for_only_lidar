@@ -136,6 +136,7 @@ class SSDHead(nn.Layer):
                 #             key: value[i]
                 #             for key, value in samples["meta"].items()
                 #         }))
+                r""" gx-20230525 """
                 results.append(
                     self._parse_result_to_sample(
                         result, samples["path"][i], {
@@ -243,6 +244,9 @@ class SSDHead(nn.Layer):
 
     @staticmethod
     def _parse_result_to_sample(result, path, meta):
+        r"""
+        gx-20230525
+        """
         if (result["scores"] == -1).any():
             sample = Sample(path=path, modality="lidar")
         else:

@@ -1054,6 +1054,7 @@ def get_official_eval_result_bak(gt_annos,
 
     return res
 
+
 def get_official_eval_result(gt_annos,
                              dt_annos,
                              current_classes,
@@ -1063,6 +1064,8 @@ def get_official_eval_result(gt_annos,
                              metric_types=("bev", "3d"),
                              recall_type='R40'):
     """
+        gx-20230525 change
+
         gt_annos and dt_annos must contains following keys:
         [bbox, location, dimensions, rotation_y, score]
     """
@@ -1146,6 +1149,7 @@ def get_official_eval_result(gt_annos,
                             metrics[metric_type]["precision"][j, :, i])
 
     return res
+
 
 def get_coco_eval_result(gt_annos,
                          dt_annos,
