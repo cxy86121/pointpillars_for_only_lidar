@@ -38,7 +38,7 @@ class KittiMetric(MetricABC):
         self.classmap = classmap
         self.indexes = indexes
 
-    def _parse_gt_to_eval_format(self,
+    def _parse_gt_to_eval_format_bak(self,
                                  groundtruths: List[np.ndarray]) -> List[dict]:
         res = []
         for rows in groundtruths:
@@ -68,6 +68,36 @@ class KittiMetric(MetricABC):
 
         return res
 
+    def _parse_gt_to_eval_format(self,
+                                 groundtruths: List[np.ndarray]) -> List[dict]:
+        res = []
+        for rows in groundtruths:
+            if rows.size == 0:
+                res.append({
+                    'name': np.zeros([0]),
+                    'truncated': np.zeros([0]),
+                    'occluded': np.zeros([0]),
+                    #'alpha': np.zeros([0]),
+                    #'bbox': np.zeros([0, 4]),
+                    'dimensions': np.zeros([0, 3]),
+                    'location': np.zeros([0, 3]),
+                    'rotation_y': np.zeros([0]),
+                    'score': np.zeros([0])
+                })
+            else:
+                res.append({
+                    'name': rows[:, 0],
+                    'truncated': rows[:, 1].astype(np.float64),
+                    'occluded': rows[:, 2].astype(np.int64),
+                    #'alpha': rows[:, 3].astype(np.float64),
+                    #'bbox': rows[:, 4:8].astype(np.float64),
+                    'dimensions': rows[:, [6, 7, 8]].astype(np.float64),
+                    'location': rows[:, 3:6].astype(np.float64),
+                    'rotation_y': rows[:, 9].astype(np.float64)
+                })
+
+        return res
+
     def get_camera_box2d(self, bboxes_3d: BBoxes3D, proj_mat: np.ndarray):
         box_corners = bboxes_3d.corners_3d
         box_corners_in_image = project_to_image(box_corners, proj_mat)
@@ -77,7 +107,7 @@ class KittiMetric(MetricABC):
 
         return box_2d_preds
 
-    def _parse_predictions_to_eval_format(
+    def _parse_predictions_to_eval_format_bak(
             self, predictions: List[Sample]) -> List[dict]:
         res = {}
         for pred in predictions:
@@ -140,12 +170,77 @@ class KittiMetric(MetricABC):
 
         return [res[idx] for idx in self.indexes]
 
+    def _parse_predictions_to_eval_format(
+            self, predictions: List[Sample]) -> List[dict]:
+        res = {}
+        for pred in predictions:
+            filter_fake_result(pred)
+            id = pred.meta.id
+            if pred.bboxes_3d is None:
+                det = {
+                    'truncated': np.zeros([0]),
+                    'occluded': np.zeros([0]),
+                    # 'alpha': np.zeros([0]),
+                    'name': np.zeros([0]),
+                    # 'bbox': np.zeros([0, 4]),
+                    'dimensions': np.zeros([0, 3]),
+                    'location': np.zeros([0, 3]),
+                    'rotation_y': np.zeros([0]),
+                    'score': np.zeros([0]),
+                }
+            else:
+                num_boxes = pred.bboxes_3d.shape[0]
+                names = np.array(
+                    [self.classmap[label] for label in pred.labels])
+                # calibs = pred.calibs
+
+                # alpha = pred.get('alpha', np.zeros([num_boxes]))
+
+                # if pred.bboxes_3d.coordmode != CoordMode.KittiCamera:
+                #     bboxes_3d = box_lidar_to_camera(pred.bboxes_3d, calibs)
+                # else:
+                #     bboxes_3d = pred.bboxes_3d
+
+                bboxes_3d = pred.bboxes_3d
+
+                if bboxes_3d.origin != [.5, 1., .5]:
+                    bboxes_3d[:, :3] += bboxes_3d[:, 3:6] * (
+                        np.array([.5, 1., .5]) - np.array(bboxes_3d.origin))
+                    bboxes_3d.origin = [.5, 1., .5]
+
+                # if pred.bboxes_2d is None:
+                #     bboxes_2d = self.get_camera_box2d(bboxes_3d, calibs[2])
+                # else:
+                #     bboxes_2d = pred.bboxes_2d
+
+                loc = bboxes_3d[:, :3]
+                dim = bboxes_3d[:, 3:6]
+
+                det = {
+                    # fake value
+                    'truncated': np.zeros([num_boxes]),
+                    'occluded': np.zeros([num_boxes]),
+                    # predict value
+                    # 'alpha': alpha,
+                    'name': names,
+                    # 'bbox': bboxes_2d,
+                    'dimensions': dim,
+                    # TODO: coord trans
+                    'location': loc,
+                    'rotation_y': bboxes_3d[:, 6],
+                    'score': pred.confidences,
+                }
+
+            res[id] = det
+
+        return [res[idx] for idx in self.indexes]
+
     def update(self, predictions: List[Sample], **kwargs):
         """
         """
         self.predictions += predictions
 
-    def compute(self, verbose=False, **kwargs) -> dict:
+    def compute_bak(self, verbose=False, **kwargs) -> dict:
         """
         """
         gt_annos = self._parse_gt_to_eval_format(self.gt_annos)
@@ -186,6 +281,55 @@ class KittiMetric(MetricABC):
                 logger.info("{}:".format(cls))
                 for overlap_thresh, metrics in cls_metrics.items():
                     for metric_type, thresh in zip(["bbox", "bev", "3d"],
+                                                   overlap_thresh):
+                        if metric_type in metrics:
+                            logger.info(
+                                "{} AP_R11@{:.0%}: {:.2f} {:.2f} {:.2f}".format(
+                                    metric_type.upper().ljust(4), thresh,
+                                    *metrics[metric_type]))
+        return metric_r40_dict, metric_r11_dict
+
+    def compute(self, verbose=False, **kwargs) -> dict:
+        """
+        """
+        gt_annos = self._parse_gt_to_eval_format(self.gt_annos)
+        dt_annos = self._parse_predictions_to_eval_format(self.predictions)
+
+        if len(dt_annos) != len(gt_annos):
+            raise RuntimeError(
+                'The number of predictions({}) is not equal to the number of GroundTruths({})'
+                .format(len(dt_annos), len(gt_annos)))
+
+        metric_r40_dict = kitti_eval(
+            gt_annos,
+            dt_annos,
+            current_classes=list(self.classmap.values()),
+            metric_types=["bev", "3d"],
+            recall_type='R40')
+
+        metric_r11_dict = kitti_eval(
+            gt_annos,
+            dt_annos,
+            current_classes=list(self.classmap.values()),
+            metric_types=["bev", "3d"],
+            recall_type='R11')
+
+        if verbose:
+            for cls, cls_metrics in metric_r40_dict.items():
+                logger.info("{}:".format(cls))
+                for overlap_thresh, metrics in cls_metrics.items():
+                    for metric_type, thresh in zip(["bev", "3d"],
+                                                   overlap_thresh):
+                        if metric_type in metrics:
+                            logger.info(
+                                "{} AP_R40@{:.0%}: {:.2f} {:.2f} {:.2f}".format(
+                                    metric_type.upper().ljust(4), thresh,
+                                    *metrics[metric_type]))
+
+            for cls, cls_metrics in metric_r11_dict.items():
+                logger.info("{}:".format(cls))
+                for overlap_thresh, metrics in cls_metrics.items():
+                    for metric_type, thresh in zip(["bev", "3d"], #“bbox”
                                                    overlap_thresh):
                         if metric_type in metrics:
                             logger.info(
