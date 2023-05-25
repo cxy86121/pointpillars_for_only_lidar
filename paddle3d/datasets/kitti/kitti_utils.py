@@ -95,6 +95,7 @@ def lidar_record_to_object(
         # print("kitti_records before:",  kitti_records)
         # cxy 20230424
         for kitti_record in kitti_records:
+            # center_z = center_z - h/2    cxy20230424
             kitti_record[5:6] = kitti_record[5:6] - kitti_record[8:9]/2
         # print("kitti_records after:", kitti_records)
 
