@@ -130,9 +130,15 @@ class SSDHead(nn.Layer):
                         if self.use_direction_classifier else None,
                         anchors_mask=anchors_mask[i]),
                     false_fn=lambda: self._box_empty())
+                # results.append(
+                #     self._parse_result_to_sample(
+                #         result, samples["path"][i], samples["calibs"][i], {
+                #             key: value[i]
+                #             for key, value in samples["meta"].items()
+                #         }))
                 results.append(
                     self._parse_result_to_sample(
-                        result, samples["path"][i], samples["calibs"][i], {
+                        result, samples["path"][i], {
                             key: value[i]
                             for key, value in samples["meta"].items()
                         }))
@@ -212,7 +218,7 @@ class SSDHead(nn.Layer):
         return prediction_dict
 
     @staticmethod
-    def _parse_result_to_sample(result, path, calibs, meta):
+    def _parse_result_to_sample_bak(result, path, calibs, meta):
         if (result["scores"] == -1).any():
             sample = Sample(path=path, modality="lidar")
         else:
@@ -230,6 +236,30 @@ class SSDHead(nn.Layer):
             sample.confidences = cls_scores.numpy()
             sample.alpha = (-paddle.atan2(-box_preds[:, 1], box_preds[:, 0]) +
                             box_preds[:, 6]).numpy()
+
+        sample.meta.update(meta)
+
+        return sample
+
+    @staticmethod
+    def _parse_result_to_sample(result, path, meta):
+        if (result["scores"] == -1).any():
+            sample = Sample(path=path, modality="lidar")
+        else:
+            sample = Sample(path=path, modality="lidar")
+            # sample.calibs = [calib.numpy() for calib in calibs]
+            box_preds = result["box3d_lidar"]
+            cls_labels = result["label_preds"]
+            cls_scores = result["scores"]
+            sample.bboxes_3d = BBoxes3D(
+                box_preds.numpy(),
+                origin=[.5, .5, 0],
+                coordmode=CoordMode.KittiLidar,
+                rot_axis=2)
+            sample.labels = cls_labels.numpy()
+            sample.confidences = cls_scores.numpy()
+            # sample.alpha = (-paddle.atan2(-box_preds[:, 1], box_preds[:, 0]) +
+            #                 box_preds[:, 6]).numpy()
 
         sample.meta.update(meta)
 
