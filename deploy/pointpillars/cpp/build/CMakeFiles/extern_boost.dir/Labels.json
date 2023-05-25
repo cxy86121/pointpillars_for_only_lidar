@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/les/MyCode/PyCode/pointpillisars_local/deploy/pointpillars/cpp/build/CMakeFiles/extern_boost"
+		},
+		{
+			"file" : "/home/les/MyCode/PyCode/pointpillisars_local/deploy/pointpillars/cpp/build/CMakeFiles/extern_boost.rule"
+		},
+		{
+			"file" : "/home/les/MyCode/PyCode/pointpillisars_local/deploy/pointpillars/cpp/build/CMakeFiles/extern_boost-complete.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-install.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-mkdir.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-download.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-update.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-patch.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-configure.rule"
+		},
+		{
+			"file" : "/boost/src/extern_boost-stamp/extern_boost-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"extern_boost"
+		],
+		"name" : "extern_boost"
+	}
+}
